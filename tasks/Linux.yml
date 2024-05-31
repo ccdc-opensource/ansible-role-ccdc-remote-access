@@ -11,6 +11,7 @@
     regexp: '^(#)?X11UseLocalhost'
     line: 'X11UseLocalhost=anybody'
     state: present
+  become: true
 
 - name: Restart xrdp service
   ansible.builtin.service: 
