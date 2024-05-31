@@ -1,1 +1,7 @@
 ---
+- name: Install the latest version of Apache
+  ansible.builtin.dnf:
+    name:
+      - xrpd
+      - tigervnc-server
+    state: latest
