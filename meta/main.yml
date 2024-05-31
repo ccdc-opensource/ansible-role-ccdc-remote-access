@@ -1,0 +1,26 @@
+---
+dependencies: []
+
+galaxy_info:
+  role_name: xrdp_install
+  namespace: ccdc
+  author: sjackson-ccdc
+  description: Install XRDP on linux machines
+  company: The Cambridge Crystallographic Data Centre
+  license: "license (BSD, MIT)"
+  min_ansible_version: 2.9
+  platforms:
+    - name: EL
+      versions:
+        - all
+    - name: Fedora
+      versions:
+        - all
+    - name: Debian
+      versions:
+        - all
+    - name: Ubuntu
+      versions:
+        - all
+  galaxy_tags:
+    - system
