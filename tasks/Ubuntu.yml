@@ -1,1 +1,5 @@
 ---
+- name: Install xrpd
+  ansible.builtin.apt:
+    name: xrdp
+    state: present
