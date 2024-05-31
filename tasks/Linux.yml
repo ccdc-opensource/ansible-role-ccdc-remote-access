@@ -8,8 +8,8 @@
 - name: Ensure X11UseLocalhost is set to anybody
   ansible.builtin.lineinfile:
     path: /etc/X11/Xwrapper.config
-    regexp: '^(#)?X11UseLocalhost'
-    line: 'X11UseLocalhost=anybody'
+    regexp: '^(#)?allowed_users'
+    line: 'allowed_users=anybody'
     state: present
   become: true
 
