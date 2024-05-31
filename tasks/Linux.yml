@@ -1,0 +1,19 @@
+---
+- name: Install xrpd
+  ansible.builtin.package:
+    name: xrdp
+    state: present
+  become: true
+
+- name: Ensure X11UseLocalhost is set to anybody
+  ansible.builtin.lineinfile:
+    path: /etc/X11/Xwrapper.config
+    regexp: '^(#)?X11UseLocalhost'
+    line: 'X11UseLocalhost=anybody'
+    state: present
+
+- name: Restart xrdp service
+  ansible.builtin.service: 
+    name: xrdp
+    state: restarted 
+    enabled: yes
