@@ -11,10 +11,8 @@
     state: present
   become: true
 
-- name: Ensure X11UseLocalhost is set to anybody
-  ansible.builtin.lineinfile:
-    path: /etc/X11/Xwrapper.config
-    regexp: '^(#)?allowed_users'
-    line: 'allowed_users=anybody'
-    state: present
-  become: true
+- name: Enable XRDP service
+  ansible.builtin.systemd_service: 
+    name: xrdp
+    state: started
+    enabled: true
