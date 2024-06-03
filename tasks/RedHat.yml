@@ -11,6 +11,14 @@
     state: present
   become: true
 
+- name: Ensure X11UseLocalhost is set to anybody
+  ansible.builtin.lineinfile:
+    path: /etc/xrdp/sesman.ini
+    regexp: '^(#)?TerminalServerUsers'
+    line: '#TerminalServerUsers=tsusers'
+    state: present
+  become: true
+
 - name: Enable XRDP service
   ansible.builtin.systemd_service: 
     name: xrdp
