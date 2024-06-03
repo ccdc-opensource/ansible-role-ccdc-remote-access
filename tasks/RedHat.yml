@@ -1,4 +1,10 @@
 ---
+- name: install epel-release
+  ansible.builtin.package:
+    name: epel-release
+    state: present
+  become: true
+
 - name: Install xrpd
   ansible.builtin.package:
     name: xrdp
@@ -12,9 +18,3 @@
     line: 'allowed_users=anybody'
     state: present
   become: true
-
-- name: Restart xrdp service
-  ansible.builtin.service: 
-    name: xrdp
-    state: restarted
-    enabled: yes
