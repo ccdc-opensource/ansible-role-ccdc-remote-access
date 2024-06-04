@@ -13,7 +13,7 @@
 
 - name: Enable multi user 
   ansible.builtin.command: systemctl set-default multi-user
-  become: 
+  become: true
 
 - name: Disable autologin
   ansible.builtin.command: systemctl disable gdm
