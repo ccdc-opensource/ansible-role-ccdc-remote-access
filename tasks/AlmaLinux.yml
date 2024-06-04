@@ -11,6 +11,10 @@
     state: present
   become: true
 
+- name: Enable multi user 
+  ansible.builtin.command: systemctl set-default multi-user
+  become: true
+
 - name: Ensure X11UseLocalhost is set to anybody
   ansible.builtin.lineinfile:
     path: /etc/xrdp/sesman.ini
