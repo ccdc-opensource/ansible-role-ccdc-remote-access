@@ -13,6 +13,10 @@
 
 - name: Enable multi user 
   ansible.builtin.command: systemctl set-default multi-user
+  become: 
+
+- name: Disable autologin
+  ansible.builtin.command: systemctl disable gdm
   become: true
 
 - name: Ensure X11UseLocalhost is set to anybody
@@ -30,3 +34,5 @@
     enabled: true
   become: true
   
+- name: reboot
+  ansible.built.reboot: 
