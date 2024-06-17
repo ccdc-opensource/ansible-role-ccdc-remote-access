@@ -39,6 +39,7 @@
     port: 3389/tcp
     permanent: true
     state: enabled
+  become: true
 
 - name: reboot
   ansible.builtin.reboot:
