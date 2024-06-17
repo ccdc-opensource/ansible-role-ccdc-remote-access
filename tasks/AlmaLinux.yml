@@ -11,7 +11,7 @@
     state: present
   become: true
 
-- name: Enable multi user 
+- name: Enable multi user
   ansible.builtin.command: systemctl set-default multi-user
   become: true
 
@@ -28,12 +28,18 @@
   become: true
 
 - name: Enable XRDP service
-  ansible.builtin.systemd_service: 
+  ansible.builtin.systemd_service:
     name: xrdp
     state: started
     enabled: true
   become: true
-  
+
+- name: allow traffic over 3389
+  ansible.posix.firewalld:
+    port: 3389/tcp
+    permanent: true
+    state: enabled
+
 - name: reboot
-  ansible.builtin.reboot: 
+  ansible.builtin.reboot:
   become: true
