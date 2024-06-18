@@ -6,14 +6,14 @@
   become: true
 
 - name: Disable autologin
-  ansible.builtin.command: systemctl disable gdm
+  ansible.builtin.command: systemd disable gdm
   become: true
 
 - name: Ensure X11UseLocalhost is set to anybody
   ansible.builtin.lineinfile:
     path: /etc/X11/Xwrapper.config
-    regexp: '^(#)?allowed_users'
-    line: 'allowed_users=anybody'
+    regexp: "^(#)?allowed_users"
+    line: "allowed_users=anybody"
     state: present
   become: true
 
