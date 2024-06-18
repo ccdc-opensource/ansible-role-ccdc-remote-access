@@ -5,9 +5,10 @@
     state: present
   become: true
 
-- name: Disable autologin
-  ansible.builtin.command: systemd disable gdm
-  become: true
+- name: Stop GDM service
+  ansible.builtin.systemd_service:
+    name: gdm
+    state: stopped
 
 - name: Ensure X11UseLocalhost is set to anybody
   ansible.builtin.lineinfile:
