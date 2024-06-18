@@ -17,9 +17,6 @@
     state: present
   become: true
 
-- name: Restart xrdp service
-  ansible.builtin.service: 
-    name: xrdp
-    state: restarted
-    enabled: true
+- name: reboot
+  ansible.builtin.reboot:
   become: true
