@@ -5,6 +5,10 @@
     state: present
   become: true
 
+- name: Disable autologin
+  ansible.builtin.command: systemctl disable gdm
+  become: true
+
 - name: Ensure X11UseLocalhost is set to anybody
   ansible.builtin.lineinfile:
     path: /etc/X11/Xwrapper.config
@@ -18,3 +22,4 @@
     name: xrdp
     state: restarted
     enabled: true
+  become: true
