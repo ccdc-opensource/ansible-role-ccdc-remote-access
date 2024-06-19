@@ -9,6 +9,7 @@
   ansible.builtin.systemd_service:
     name: gdm
     state: stopped
+  become: true
 
 - name: Ensure X11UseLocalhost is set to anybody
   ansible.builtin.lineinfile:
