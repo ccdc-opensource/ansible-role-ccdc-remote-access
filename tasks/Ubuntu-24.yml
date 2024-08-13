@@ -1,0 +1,46 @@
+---
+# Fix for xrdp selecting wrong DE. See - https://github.com/neutrinolabs/xrdp/issues/3053
+
+- name: Run xrdp install
+  ansible.builtin.include_tasks: Ubuntu.yml
+
+- name: Stop xrdp
+  ansible.builtin.service:
+    name: xrdp
+    state: stopped
+  become: true
+
+- name: Download startwm.sh
+  ansible.builtin.get_url:
+    url: https://github.com/neutrinolabs/xrdp/raw/devel/sesman/startwm.sh
+    dest: /etc/xrdp/startwm.sh
+    mode: "755"
+    force: true
+  become: true
+
+- name: Update file permissions
+  ansible.builtin.file:
+    path: /etc/xrdp/startwm.sh
+    owner: root
+    mode: "755"
+  become: true
+
+- name: Create default desktop
+  ansible.builtin.file:
+    path: /etc/profile.d/90-xrdp-default-desktop.sh
+    state: touch
+    owner: root
+    mode: "644"
+  become: true
+
+- name: Set default desktop
+  ansible.builtin.shell: echo "[ -n \"\$XRDP_SESSION\" -a -z \"\$DESKTOP_SESSION\" ] && export DESKTOP_SESSION=$DESKTOP_SESSION" > /etc/profile.d/90-xrdp-default-desktop.sh
+  environment:
+    DESKTOP_SESSION: ubuntu
+  become: true
+
+- name: Start xrdp
+  ansible.builtin.service:
+    name: xrdp
+    state: started
+  become: true
