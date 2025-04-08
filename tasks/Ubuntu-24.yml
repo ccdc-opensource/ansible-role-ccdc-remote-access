@@ -1,46 +1,33 @@
 ---
-# Fix for xrdp selecting wrong DE. See - https://github.com/neutrinolabs/xrdp/issues/3053
+- name: Install winpr-utils for generating certificate
+  ansible.builtin.package:
+    name: winpr-utils
+    state: present
 
-- name: Run xrdp install
-  ansible.builtin.include_tasks: Ubuntu.yml
+- name: Generate certificate
+  ansible.builtin.command: winpr-makecert -silent -rdp -path ~gnome-remote-desktop rdp-tls
+  become: true
+  become_user: gnome-remote-desktop
 
-- name: Stop xrdp
-  ansible.builtin.service:
-    name: xrdp
-    state: stopped
+- name: Add TLS cert
+  ansible.builtin.command: grdctl --system rdp set-tls-key ~gnome-remote-desktop/rdp-tls.key
   become: true
 
-- name: Download startwm.sh
-  ansible.builtin.get_url:
-    url: https://github.com/neutrinolabs/xrdp/raw/devel/sesman/startwm.sh
-    dest: /etc/xrdp/startwm.sh
-    mode: "755"
-    force: true
+- name: Add TLS key
+  ansible.builtin.command: grdctl --system rdp set-tls-cert ~gnome-remote-desktop/rdp-tls.crt
   become: true
 
-- name: Update file permissions
-  ansible.builtin.file:
-    path: /etc/xrdp/startwm.sh
-    owner: root
-    mode: "755"
+- name: Setup RDP credentials
+  ansible.builtin.command: grdctl --system rdp set-credentials "{{ RDP_USER }}" "{{ RDP_PASSWORD }}"
   become: true
 
-- name: Create default desktop
-  ansible.builtin.file:
-    path: /etc/profile.d/90-xrdp-default-desktop.sh
-    state: touch
-    owner: root
-    mode: "644"
+- name: Enable RDP
+  ansible.builtin.command: grdctl --system rdp enable
   become: true
 
-- name: Set default desktop
-  ansible.builtin.shell: echo "[ -n \"\$XRDP_SESSION\" -a -z \"\$DESKTOP_SESSION\" ] && export DESKTOP_SESSION=$DESKTOP_SESSION" > /etc/profile.d/90-xrdp-default-desktop.sh
-  environment:
-    DESKTOP_SESSION: ubuntu
+- name: Enable RDP service
+  ansible.builtin.command: systemctl --now enable gnome-remote-desktop.service
   become: true
 
-- name: Start xrdp
-  ansible.builtin.service:
-    name: xrdp
-    state: started
-  become: true
+- name: Reboot
+  ansible.builtin.reboot:
