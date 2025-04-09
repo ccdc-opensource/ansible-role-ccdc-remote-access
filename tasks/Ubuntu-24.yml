@@ -32,3 +32,4 @@
 
 - name: Reboot
   ansible.builtin.reboot:
+  become: true
