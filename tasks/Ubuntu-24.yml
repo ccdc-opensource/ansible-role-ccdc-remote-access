@@ -3,6 +3,7 @@
   ansible.builtin.package:
     name: winpr-utils
     state: present
+  become: true
 
 - name: Generate certificate
   ansible.builtin.command: winpr-makecert -silent -rdp -path ~gnome-remote-desktop rdp-tls
