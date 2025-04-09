@@ -19,7 +19,7 @@
   become: true
 
 - name: Setup RDP credentials
-  ansible.builtin.command: grdctl --system rdp set-credentials "{{ RDP_USER }}" "{{ RDP_PASSWORD }}"
+  ansible.builtin.command: grdctl --system rdp set-credentials "{{ rdp_user }}" "{{ rdp_password }}"
   become: true
 
 - name: Enable RDP
