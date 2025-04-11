@@ -1,22 +1,35 @@
 ---
-- name: Install xrpd
+- name: Install winpr-utils for generating certificate
   ansible.builtin.package:
-    name: xrdp
+    name: winpr-utils
     state: present
   become: true
 
-- name: Stop GDM service
-  ansible.builtin.command: systemctl disable gdm
+- name: Generate certificate
+  ansible.builtin.command: winpr-makecert -silent -rdp -path ~gnome-remote-desktop rdp-tls
+  become: true
+  become_user: gnome-remote-desktop
+
+- name: Add TLS cert
+  ansible.builtin.command: grdctl --system rdp set-tls-key ~gnome-remote-desktop/rdp-tls.key
   become: true
 
-- name: Ensure X11UseLocalhost is set to anybody
-  ansible.builtin.lineinfile:
-    path: /etc/X11/Xwrapper.config
-    regexp: "^(#)?allowed_users"
-    line: "allowed_users=anybody"
-    state: present
+- name: Add TLS key
+  ansible.builtin.command: grdctl --system rdp set-tls-cert ~gnome-remote-desktop/rdp-tls.crt
   become: true
 
-- name: reboot
+- name: Setup RDP credentials
+  ansible.builtin.command: grdctl --system rdp set-credentials "{{ rdp_user }}" "{{ rdp_password }}"
+  become: true
+
+- name: Enable RDP
+  ansible.builtin.command: grdctl --system rdp enable
+  become: true
+
+- name: Enable RDP service
+  ansible.builtin.command: systemctl --now enable gnome-remote-desktop.service
+  become: true
+
+- name: Reboot
   ansible.builtin.reboot:
   become: true
