@@ -1,4 +1,4 @@
-# Ansible Role: Setuop remote access
+# Ansible Role: Setup remote access
 
 Install/Setup remote access on linux machines
 
