@@ -2,10 +2,10 @@
 dependencies: []
 
 galaxy_info:
-  role_name: xrdp_install
+  role_name: remote_access
   namespace: ccdc
   author: sjackson-ccdc
-  description: Install XRDP on linux machines
+  description: Installs/Setup remote access on linux machines
   company: The Cambridge Crystallographic Data Centre
   license: "license (BSD, MIT)"
   min_ansible_version: 2.9

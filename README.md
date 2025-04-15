@@ -1,6 +1,6 @@
-# Ansible Role: Install XRDP
+# Ansible Role: Setuop remote access
 
-Install XRDP on linux machines for remote access
+Install/Setup remote access on linux machines
 
 ## Requirements
 
@@ -18,7 +18,7 @@ None.
 
     - hosts: all
       roles:
-        - ccdc.xrdp_install
+        - ccdc.remote_access
 
 ## License
 
