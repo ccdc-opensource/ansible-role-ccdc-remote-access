@@ -33,13 +33,40 @@
     state: started
     enabled: true
 
-- name: Open RDP service in firewalld
+- name: Install firewalld
+  become: true
+  ansible.builtin.package:
+    name: firewalld
+    state: present
+
+- name: Enable and start firewalld
+  become: true
+  ansible.builtin.service:
+    name: firewalld
+    state: started
+    enabled: true
+
+- name: Check if firewalld is active
+  become: true
+  ansible.builtin.command: systemctl is-active firewalld
+  register: firewalld_state
+  changed_when: false
+  failed_when: false
+
+- name: Open RDP in firewalld
   become: true
   ansible.posix.firewalld:
     service: rdp
     permanent: true
     state: enabled
-    immediate: true
+    immediate: "{{ firewalld_state.stdout == 'active' }}"
+  notify: Reload firewalld
+
+- name: Reload firewalld
+  become: true
+  ansible.builtin.service:
+    name: firewalld
+    state: reloaded
 
 - name: Query SELinux status
   ansible.builtin.command: getenforce
