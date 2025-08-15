@@ -1,0 +1,39 @@
+---
+- name: Install EPEL repository
+  ansible.builtin.package:
+    name: epel-release
+    state: present
+  become: true
+
+- name: Install xrdp
+  ansible.builtin.package:
+    name: xrdp
+    state: present
+  become: true
+
+- name: Enable and start xrdp service
+  ansible.builtin.service:
+    name: xrdp
+    state: started
+    enabled: true
+  become: true
+
+- name: Allow RDP port in firewalld
+  ansible.posix.firewalld:
+    port: 3389/tcp
+    permanent: true
+    state: enabled
+    immediate: true
+  become: true
+
+- name: Set SELinux boolean for xrdp
+  ansible.posix.seboolean:
+    name: xrdp_run_unconfined
+    state: true
+    persistent: true
+  become: true
+  when: ansible_selinux.status == "enabled"
+
+- name: reboot
+  ansible.builtin.reboot:
+  become: true
