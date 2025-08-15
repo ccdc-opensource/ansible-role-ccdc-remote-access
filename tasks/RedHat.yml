@@ -1,38 +1,71 @@
 ---
-- name: Install EPEL repository
+- name: Install EPEL
+  become: true
   ansible.builtin.package:
     name: epel-release
     state: present
-  become: true
 
-- name: Install xrdp
-  ansible.builtin.package:
-    name: xrdp
-    state: present
+- name: Install GNOME desktop group
   become: true
+  ansible.builtin.dnf:
+    name: "@Server with GUI"
+    state: present
+
+- name: Set default to graphical.target
+  become: true
+  ansible.builtin.file:
+    path: /etc/systemd/system/default.target
+    state: link
+    src: /usr/lib/systemd/system/graphical.target
+
+- name: Install xrdp and xorgxrdp
+  become: true
+  ansible.builtin.package:
+    name:
+      - xrdp
+      - xorgxrdp
+    state: present
 
 - name: Enable and start xrdp service
+  become: true
   ansible.builtin.service:
     name: xrdp
     state: started
     enabled: true
-  become: true
 
-- name: Allow RDP port in firewalld
+- name: Open RDP service in firewalld
+  become: true
   ansible.posix.firewalld:
-    port: 3389/tcp
+    service: rdp
     permanent: true
     state: enabled
     immediate: true
-  become: true
 
-- name: Set SELinux boolean for xrdp
+- name: Query SELinux status
+  ansible.builtin.command: getenforce
+  register: selinux_mode
+  changed_when: false
+
+- name: Allow xrdp to connect to unreserved ports
+  become: true
   ansible.posix.seboolean:
-    name: xrdp_run_unconfined
+    name: xrdp_connect_all_unreserved_ports
     state: true
     persistent: true
+  when:
+    - selinux_mode.stdout is search("Enforcing|Permissive")
+
+- name: Wait for xrdp to listen on 3389
+  ansible.builtin.wait_for:
+    port: 3389
+    timeout: 30
+    state: started
+
+- name: Restart xrdp
   become: true
-  when: ansible_selinux.status == "enabled"
+  ansible.builtin.service:
+    name: xrdp
+    state: restarted
 
 - name: reboot
   ansible.builtin.reboot:
