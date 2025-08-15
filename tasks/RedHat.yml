@@ -60,13 +60,6 @@
     permanent: true
     state: enabled
     immediate: "{{ firewalld_state.stdout == 'active' }}"
-  notify: Reload firewalld
-
-- name: Reload firewalld
-  become: true
-  ansible.builtin.service:
-    name: firewalld
-    state: reloaded
 
 - name: Query SELinux status
   ansible.builtin.command: getenforce
@@ -79,8 +72,7 @@
     name: xrdp_connect_all_unreserved_ports
     state: true
     persistent: true
-  when:
-    - selinux_mode.stdout is search("Enforcing|Permissive")
+  when: selinux_mode.stdout is search("Enforcing|Permissive")
 
 - name: Wait for xrdp to listen on 3389
   ansible.builtin.wait_for:
