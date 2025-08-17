@@ -61,18 +61,32 @@
     state: enabled
     immediate: "{{ firewalld_state.stdout == 'active' }}"
 
-- name: Query SELinux status
-  ansible.builtin.command: getenforce
-  register: selinux_mode
-  changed_when: false
+- name: Install SELinux utils and xrdp policy
+  become: true
+  ansible.builtin.package:
+    name:
+      - policycoreutils-python-utils
+      - xrdp-selinux
+    state: present
 
-- name: Allow xrdp to connect to unreserved ports
+- name: List SELinux booleans
+  become: true
+  ansible.builtin.command: semanage boolean -l
+  register: sebools
+  changed_when: false
+  failed_when: sebools.rc != 0
+  when: ansible_selinux.status == "enabled"
+
+- name: Allow xrdp to connect to unreserved ports (if supported)
   become: true
   ansible.posix.seboolean:
     name: xrdp_connect_all_unreserved_ports
     state: true
     persistent: true
-  when: selinux_mode.stdout is search("Enforcing|Permissive")
+  when:
+    - ansible_selinux.status == "enabled"
+    - sebools.stdout is defined
+    - "'xrdp_connect_all_unreserved_ports' in sebools.stdout"
 
 - name: Wait for xrdp to listen on 3389
   ansible.builtin.wait_for:
