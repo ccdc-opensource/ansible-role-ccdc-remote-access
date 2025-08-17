@@ -10,6 +10,7 @@
   ansible.builtin.dnf:
     name: "@Server with GUI"
     state: present
+  register: gnome_group
 
 - name: Set default to graphical.target
   become: true
@@ -17,14 +18,46 @@
     path: /etc/systemd/system/default.target
     state: link
     src: /usr/lib/systemd/system/graphical.target
+  register: graphical_target
 
-- name: Install xrdp and xorgxrdp
+- name: Install xrdp, xorg backend and X11 helpers
   become: true
   ansible.builtin.package:
     name:
       - xrdp
       - xorgxrdp
+      - xorg-x11-xauth
+      - xorg-x11-xinit
     state: present
+
+- name: Ensure startwm.sh uses /etc/X11/xinit/Xsession when present
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/xrdp/startwm.sh
+    regexp: '^test -r /etc/X11/xinit/Xsession'
+    line: 'test -r /etc/X11/xinit/Xsession && exec /etc/X11/xinit/Xsession'
+    insertafter: '^test -r /etc/X11/Xsession.*'
+    state: present
+    create: no
+    backup: yes
+  register: startwm_xsession
+
+- name: Add GNOME fallback to startwm.sh
+  become: true
+  ansible.builtin.blockinfile:
+    path: /etc/xrdp/startwm.sh
+    marker: "# {mark} XRDP GNOME FALLBACK"
+    insertafter: EOF
+    block: |
+      if command -v gnome-session >/dev/null 2>&1; then
+        export GNOME_SHELL_SESSION_MODE=classic
+        export XDG_SESSION_DESKTOP=GNOME
+        export XDG_CURRENT_DESKTOP=GNOME
+        exec gnome-session
+      fi
+      exec /usr/bin/xterm
+  register: startwm_fallback
+  mode: '0755'
 
 - name: Enable and start xrdp service
   become: true
@@ -32,6 +65,13 @@
     name: xrdp
     state: started
     enabled: true
+
+- name: Restart xrdp if startwm.sh changed
+  become: true
+  ansible.builtin.service:
+    name: xrdp
+    state: restarted
+  when: startwm_xsession.changed or startwm_fallback.changed
 
 - name: Install firewalld
   become: true
@@ -94,12 +134,7 @@
     timeout: 30
     state: started
 
-- name: Restart xrdp
+- name: Reboot if GUI was newly installed or default target changed
   become: true
-  ansible.builtin.service:
-    name: xrdp
-    state: restarted
-
-- name: reboot
   ansible.builtin.reboot:
-  become: true
+  when: gnome_group.changed or graphical_target.changed
