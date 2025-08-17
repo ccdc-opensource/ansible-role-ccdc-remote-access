@@ -28,30 +28,42 @@
       - xorg-x11-xinit
     state: present
 
-- name: Ensure startwm.sh uses /etc/X11/xinit/Xsession when present
+- name: Stat /etc/xrdp/startwm.sh
   become: true
-  ansible.builtin.lineinfile:
+  ansible.builtin.stat:
     path: /etc/xrdp/startwm.sh
-    insertafter: '^test -r /etc/X11/Xsession.*'
-    regexp: '^test -r /etc/X11/xinit/Xsession'
-    line: 'test -r /etc/X11/xinit/Xsession && exec /etc/X11/xinit/Xsession'
-    backup: true
-    state: present
+  register: startwm_stat
 
-- name: Add GNOME fallback to startwm.sh
+- name: Create /etc/xrdp/startwm.sh with a sane default if missing
   become: true
-  ansible.builtin.blockinfile:
-    path: /etc/xrdp/startwm.sh
-    marker: '# {mark} XRDP GNOME FALLBACK'
-    insertafter: EOF
-    block: |
+  ansible.builtin.copy:
+    dest: /etc/xrdp/startwm.sh
+    mode: '0755'
+    content: |
+      #!/bin/sh
+      # Minimal XRDP session launcher for Rocky/RHEL
+      # Load system profile if present
+      [ -r /etc/profile ] && . /etc/profile
+
+      # Prefer the RHEL/Rocky Xsession path, then Debian-style path
+      if [ -r /etc/X11/xinit/Xsession ]; then
+        exec /etc/X11/xinit/Xsession
+      fi
+      if [ -r /etc/X11/Xsession ]; then
+        exec /etc/X11/Xsession
+      fi
+
+      # GNOME fallback
       if command -v gnome-session >/dev/null 2>&1; then
         export GNOME_SHELL_SESSION_MODE=classic
         export XDG_SESSION_DESKTOP=GNOME
         export XDG_CURRENT_DESKTOP=GNOME
         exec gnome-session
       fi
+
+      # Last resort
       exec /usr/bin/xterm
+  when: not startwm_stat.stat.exists
 
 - name: Enable and start xrdp service
   become: true
@@ -114,9 +126,3 @@
     - ansible_selinux.status == "enabled"
     - sebools.stdout is defined
     - "'xrdp_connect_all_unreserved_ports' in sebools.stdout"
-
-- name: Wait for xrdp to listen on 3389
-  ansible.builtin.wait_for:
-    port: 3389
-    timeout: 30
-    state: started
