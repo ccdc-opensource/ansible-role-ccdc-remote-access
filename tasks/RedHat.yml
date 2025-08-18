@@ -27,16 +27,11 @@
       - xorg-x11-server-Xorg
       - xorg-x11-xauth
       - xorg-x11-xinit
-    state: present
-
-- name: Install XRDP desktop prerequisites
-  become: true
-  ansible.builtin.package:
-    name:
       - dbus-x11
       - gnome-session
       - gnome-shell
       - gnome-classic-session
+      - xterm
     state: present
 
 - name: Write /etc/xrdp/startwm.sh
@@ -80,6 +75,16 @@
       param=-logfile
       param=.xorgxrdp.%s.log
   register: sesman_xorg_block
+
+- name: Point sesman to startwm.sh as the default
+  become: true
+  ansible.builtin.ini_file:
+    path: /etc/xrdp/sesman.ini
+    section: Globals
+    option: DefaultWindowManager
+    value: /etc/xrdp/startwm.sh
+    backup: true
+  register: sesman_default_wm
 
 - name: Ensure Xorg section exists
   become: true
@@ -142,7 +147,14 @@
   ansible.builtin.service:
     name: xrdp
     state: restarted
-  when: sesman_xorg_block.changed or xrdp_ini_xorg.changed or ini_lib.changed or ini_code.changed or ini_ip_absent.changed or xrdp_disable_xvnc.changed
+  when: >
+    sesman_xorg_block.changed or
+    xrdp_ini_xorg.changed or
+    ini_lib.changed or
+    ini_code.changed or
+    ini_ip_absent.changed or
+    xrdp_disable_xvnc.changed or
+    sesman_default_wm.changed
 
 - name: Gather service facts
   ansible.builtin.service_facts:
