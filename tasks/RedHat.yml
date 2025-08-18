@@ -62,7 +62,7 @@
 
 - name: Check if Xorg is already present
   become: true
-  ansible.builtin.command: grep -c '^\[Xorg\]' /etc/xrdp/xrdp.ini || true
+  ansible.builtin.shell: "grep -q '^\\[Xorg\\]' /etc/xrdp/xrdp.ini || true"
   register: has_xorg
   changed_when: false
 
@@ -82,7 +82,7 @@
       port=-1
       code=20
   register: xrdp_ini_xorg
-  when: has_xorg.stdout | int == 0
+  when: has_xorg.rc != 0
 
 - name: Ensure sesman uses /usr/libexec/Xorg
   become: true
