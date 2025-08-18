@@ -120,51 +120,59 @@
   register: sesman_xorg_path
   failed_when: false
 
-- name: Check for /usr/lib64/xrdp/libxorgxrdp.so
-  become: true
-  ansible.builtin.stat:
-    path: /usr/lib64/xrdp/libxorgxrdp.so
-  register: libxorgxrdp_64
-
-- name: Check for /usr/lib/xrdp/libxorgxrdp.so
-  become: true
-  ansible.builtin.stat:
-    path: /usr/lib/xrdp/libxorgxrdp.so
-  register: libxorgxrdp_32
-
-- name: Check for /usr/lib64/xorg/modules/libxorgxrdp.so
-  become: true
-  ansible.builtin.stat:
-    path: /usr/lib64/xorg/modules/libxorgxrdp.so
-  register: libxorgxrdp_mod_64
-
-- name: Check for /usr/lib/xorg/modules/libxorgxrdp.so
-  become: true
-  ansible.builtin.stat:
-    path: /usr/lib/xorg/modules/libxorgxrdp.so
-  register: libxorgxrdp_mod_32
-
-- name: Symlink libxorgxrdp.so into /usr/lib64/xrdp
+- name: Ensure xrdp lib dirs exist
   become: true
   ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - /usr/lib64/xrdp
+    - /usr/lib/xrdp
+
+- name: Stat possible libxorgxrdp.so locations
+  become: true
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  register: xorglib_stats
+  loop:
+    - /usr/lib64/xrdp/libxorgxrdp.so
+    - /usr/lib/xrdp/libxorgxrdp.so
+    - /usr/lib64/xorg/modules/libxorgxrdp.so
+    - /usr/lib/xorg/modules/libxorgxrdp.so
+
+- name: Copy libxorgxrdp.so -> /usr/lib64/xrdp
+  become: true
+  ansible.builtin.copy:
+    remote_src: true
     src: /usr/lib64/xorg/modules/libxorgxrdp.so
     dest: /usr/lib64/xrdp/libxorgxrdp.so
-    state: link
+    mode: '0644'
+  register: copy_xorg_64
   when:
-    - not libxorgxrdp_64.stat.exists
-    - libxorgxrdp_mod_64.stat.exists
-  register: link_xorg_64
+    - xorglib_stats.results[0].stat.exists == false
+    - xorglib_stats.results[2].stat.exists == true
 
-- name: Symlink libxorgxrdp.so into /usr/lib/xrdp
+- name: Copy libxorgxrdp.so -> /usr/lib/xrdp
   become: true
-  ansible.builtin.file:
+  ansible.builtin.copy:
+    remote_src: true
     src: /usr/lib/xorg/modules/libxorgxrdp.so
     dest: /usr/lib/xrdp/libxorgxrdp.so
-    state: link
+    mode: '0644'
+  register: copy_xorg_32
   when:
-    - not libxorgxrdp_32.stat.exists
-    - libxorgxrdp_mod_32.stat.exists
-  register: link_xorg_32
+    - xorglib_stats.results[1].stat.exists == false
+    - xorglib_stats.results[3].stat.exists == true
+
+- name: Restore SELinux context on xrdp libs
+  become: true
+  ansible.builtin.command: "{{ item }}"
+  changed_when: false
+  failed_when: false
+  loop:
+    - restorecon -v /usr/lib64/xrdp/libxorgxrdp.so
+    - restorecon -v /usr/lib/xrdp/libxorgxrdp.so
 
 - name: Disable Xvnc session in xrdp.ini
   become: true
@@ -192,8 +200,8 @@
     xrdp_ini_xorg.changed or
     sesman_xorg_path.changed or
     sesman_xorg_block.changed | default(false) or
-    link_xorg_64.changed | default(false) or
-    link_xorg_32.changed | default(false) or
+    copy_xorg_64.changed | default(false) or
+    copy_xorg_32.changed | default(false) or
     xrdp_disable_xvnc.changed | default(false)
 
 - name: Install firewalld
