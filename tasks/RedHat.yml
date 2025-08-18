@@ -11,14 +11,14 @@
     name: "@Server with GUI"
     state: present
 
-- name: Set default to graphical.target
+- name: Set default.target to graphical.target
   become: true
   ansible.builtin.file:
     path: /etc/systemd/system/default.target
     state: link
     src: /usr/lib/systemd/system/graphical.target
 
-- name: Install XRDP + Xorg backend bits
+- name: Install XRDP and Xorg
   become: true
   ansible.builtin.package:
     name:
@@ -60,7 +60,7 @@
       [ -r /etc/X11/Xsession ] && exec /etc/X11/Xsession
       exec /usr/bin/xterm
 
-- name: Ensure Xorg block in /etc/xrdp/sesman.ini
+- name: Ensure Xorg in /etc/xrdp/sesman.ini
   become: true
   ansible.builtin.blockinfile:
     path: /etc/xrdp/sesman.ini
@@ -74,7 +74,7 @@
       param=tcp
       param=-logfile
       param=.xorgxrdp.%s.log
-  register: sesman_xorg_block
+  register: sesman_xorg
 
 - name: Point sesman to startwm.sh as the default
   become: true
@@ -84,9 +84,9 @@
     option: DefaultWindowManager
     value: /etc/xrdp/startwm.sh
     backup: true
-  register: sesman_default_wm
+  register: sesman_default
 
-- name: Ensure Xorg section exists
+- name: Ensure Xorg in xrdp.ini
   become: true
   ansible.builtin.blockinfile:
     path: /etc/xrdp/xrdp.ini
@@ -108,7 +108,7 @@
     value: libxup.so
   register: ini_lib
 
-- name: Ensure Xorg session code=20
+- name: Ensure Xorg session
   become: true
   ansible.builtin.ini_file:
     path: /etc/xrdp/xrdp.ini
@@ -117,14 +117,14 @@
     value: "20"
   register: ini_code
 
-- name: Remove 'ip=' key from Xorg
+- name: Remove ip from Xorg
   become: true
   ansible.builtin.ini_file:
     path: /etc/xrdp/xrdp.ini
     section: Xorg
     option: ip
     state: absent
-  register: ini_ip_absent
+  register: remove_ip_ini
 
 - name: Disable Xvnc
   become: true
@@ -148,13 +148,13 @@
     name: xrdp
     state: restarted
   when: >
-    sesman_xorg_block.changed or
+    sesman_xorg.changed or
     xrdp_ini_xorg.changed or
     ini_lib.changed or
     ini_code.changed or
-    ini_ip_absent.changed or
+    remove_ip_ini.changed or
     xrdp_disable_xvnc.changed or
-    sesman_default_wm.changed
+    sesman_default.changed
 
 - name: Gather service facts
   ansible.builtin.service_facts:
