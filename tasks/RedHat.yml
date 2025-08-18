@@ -18,12 +18,13 @@
     state: link
     src: /usr/lib/systemd/system/graphical.target
 
-- name: Install xrdp, xorg backend and X11 helpers
+- name: Install XRDP + Xorg backend bits
   become: true
   ansible.builtin.package:
     name:
       - xrdp
       - xorgxrdp
+      - xorg-x11-server-Xorg
       - xorg-x11-xauth
       - xorg-x11-xinit
     state: present
@@ -46,53 +47,7 @@
       fi
       exec /usr/bin/xterm
 
-- name: Remove earlier managed Xorg session block
-  become: true
-  ansible.builtin.blockinfile:
-    path: /etc/xrdp/xrdp.ini
-    marker: "; {mark} MANAGED XORG SESSION"
-    state: absent
-
-- name: Install Xorg server
-  become: true
-  ansible.builtin.package:
-    name: xorg-x11-server-Xorg
-    state: present
-  register: xorg_srv
-
-- name: Check if Xorg is already present
-  become: true
-  ansible.builtin.command: grep -q '^\[Xorg\]' /etc/xrdp/xrdp.ini
-  register: has_xorg
-  changed_when: false
-  failed_when: has_xorg.rc not in [0, 1]
-
-- name: Ensure Xorg session exists
-  become: true
-  ansible.builtin.blockinfile:
-    path: /etc/xrdp/xrdp.ini
-    marker: "; {mark} MANAGED XORG SESSION"
-    insertafter: EOF
-    block: |
-      [Xorg]
-      name=Xorg
-      lib=libxorgxrdp.so
-      username=ask
-      password=ask
-      ip=127.0.0.1
-      port=-1
-      code=20
-  register: xrdp_ini_xorg
-  when: has_xorg.rc == 1
-
-- name: Check if Xorg is already present in sesman.ini
-  become: true
-  ansible.builtin.command: grep -q '^\[Xorg\]' /etc/xrdp/sesman.ini
-  register: has_sesman_xorg
-  changed_when: false
-  failed_when: has_sesman_xorg.rc not in [0, 1]
-
-- name: Ensure Xorg block in sesman.ini
+- name: Ensure Xorg block in /etc/xrdp/sesman.ini
   become: true
   ansible.builtin.blockinfile:
     path: /etc/xrdp/sesman.ini
@@ -107,81 +62,48 @@
       param=-logfile
       param=.xorgxrdp.%s.log
   register: sesman_xorg_block
-  when: has_sesman_xorg.rc == 1
 
-- name: Ensure sesman uses /usr/libexec/Xorg
+- name: Ensure Xorg section exists
   become: true
-  ansible.builtin.lineinfile:
-    path: /etc/xrdp/sesman.ini
-    regexp: '^param=Xorg$|^param=.*/Xorg$'
-    line: 'param=/usr/libexec/Xorg'
-    insertafter: '^\[Xorg\]'
-    backup: true
-  register: sesman_xorg_path
-  failed_when: false
-
-- name: Ensure xrdp lib dirs exist
-  become: true
-  ansible.builtin.file:
-    path: "{{ item }}"
-    state: directory
-    mode: '0755'
-  loop:
-    - /usr/lib64/xrdp
-    - /usr/lib/xrdp
-
-- name: Copy libxorgxrdp.so to /usr/lib64/xrdp
-  become: true
-  ansible.builtin.copy:
-    remote_src: true
-    src: /usr/lib64/xorg/modules/libxorgxrdp.so
-    dest: /usr/lib64/xrdp/libxorgxrdp.so
-    mode: '0644'
-    force: true
-  register: copy_xorg_64_force
-  failed_when: false
-
-- name: If 64-bit source is not present copy to /usr/lib/xrdp instead
-  become: true
-  ansible.builtin.copy:
-    remote_src: true
-    src: /usr/lib/xorg/modules/libxorgxrdp.so
-    dest: /usr/lib/xrdp/libxorgxrdp.so
-    mode: '0644'
-    force: true
-  register: copy_xorg_32_force
-  failed_when: false
-
-- name: Restore SELinux context on xrdp libs
-  become: true
-  ansible.builtin.command: "{{ item }}"
-  changed_when: false
-  failed_when: false
-  loop:
-    - restorecon -v /usr/lib64/xrdp/libxorgxrdp.so
-    - restorecon -v /usr/lib/xrdp/libxorgxrdp.so
-
-- name: Choose absolute lib path we actually have
-  become: true
-  ansible.builtin.stat:
-    path: /usr/lib64/xrdp/libxorgxrdp.so
-  register: have_lib64
-
-- name: Set fact for absolute xorg lib path
-  ansible.builtin.set_fact:
-    xorg_lib_path: "{{ '/usr/lib64/xrdp/libxorgxrdp.so' if have_lib64.stat.exists else '/usr/lib/xrdp/libxorgxrdp.so' }}"
-
-- name: Point Xorg lib to absolute path in xrdp.ini
-  become: true
-  ansible.builtin.lineinfile:
+  ansible.builtin.blockinfile:
     path: /etc/xrdp/xrdp.ini
-    regexp: '^lib='
-    line: "lib={{ xorg_lib_path }}"
-    insertafter: '^\[Xorg\]'
-    backup: true
-  register: xrdp_ini_lib_abs
+    marker: "; {mark} MANAGED XORG SESSION"
+    insertafter: EOF
+    block: |
+      [Xorg]
+      name=Xorg
+      username=ask
+      password=ask
+  register: xrdp_ini_xorg
 
-- name: Disable Xvnc session in xrdp.ini
+- name: Set Xorg session lib=libxup.so
+  become: true
+  ansible.builtin.ini_file:
+    path: /etc/xrdp/xrdp.ini
+    section: Xorg
+    option: lib
+    value: libxup.so
+  register: ini_lib
+
+- name: Ensure Xorg session code=20
+  become: true
+  ansible.builtin.ini_file:
+    path: /etc/xrdp/xrdp.ini
+    section: Xorg
+    option: code
+    value: "20"
+  register: ini_code
+
+- name: Remove 'ip=' key from Xorg
+  become: true
+  ansible.builtin.ini_file:
+    path: /etc/xrdp/xrdp.ini
+    section: Xorg
+    option: ip
+    state: absent
+  register: ini_ip_absent
+
+- name: Disable Xvnc
   become: true
   ansible.builtin.replace:
     path: /etc/xrdp/xrdp.ini
@@ -190,12 +112,6 @@
     backup: true
   register: xrdp_disable_xvnc
 
-- name: Verify libxorgxrdp.so is accessible to xrdp
-  become: true
-  ansible.builtin.shell: |
-    test -r /usr/lib64/xrdp/libxorgxrdp.so || test -r /usr/lib/xrdp/libxorgxrdp.so
-  changed_when: false
-
 - name: Enable and start xrdp
   become: true
   ansible.builtin.service:
@@ -203,38 +119,17 @@
     state: started
     enabled: true
 
-- name: Restart xrdp if Xorg config changed
+- name: Restart xrdp if config changed
   become: true
   ansible.builtin.service:
     name: xrdp
     state: restarted
-  when: >
-    xorg_srv.changed or
-    xrdp_ini_xorg.changed or
-    sesman_xorg_path.changed or
-    sesman_xorg_block.changed | default(false) or
-    copy_xorg_64_force.changed | default(false) or
-    copy_xorg_32_force.changed | default(false) or
-    xrdp_ini_lib_abs.changed | default(false) or
-    xrdp_disable_xvnc.changed | default(false)
-
-- name: Install firewalld
-  become: true
-  ansible.builtin.package:
-    name: firewalld
-    state: present
-
-- name: Enable and start firewalld
-  become: true
-  ansible.builtin.service:
-    name: firewalld
-    state: started
-    enabled: true
+  when: sesman_xorg_block.changed or xrdp_ini_xorg.changed or ini_lib.changed or ini_code.changed or ini_ip_absent.changed or xrdp_disable_xvnc.changed
 
 - name: Gather service facts
   ansible.builtin.service_facts:
 
-- name: Allow RDP in firewalld when running
+- name: Allow 3389/tcp in firewalld when running
   become: true
   ansible.posix.firewalld:
     service: rdp
@@ -244,6 +139,12 @@
   when:
     - "'firewalld.service' in ansible_facts.services"
     - ansible_facts.services['firewalld.service'].state == 'running'
+
+- name: Wait for xrdp to listen on 3389
+  ansible.builtin.wait_for:
+    port: 3389
+    timeout: 30
+    state: started
 
 - name: Install SELinux utils/policy
   become: true
