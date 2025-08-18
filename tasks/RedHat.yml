@@ -36,24 +36,52 @@
     content: |
       #!/bin/sh
       [ -r /etc/profile ] && . /etc/profile
-
-      if [ -r /etc/X11/xinit/Xsession ]; then
-        exec /etc/X11/xinit/Xsession
-      fi
-      if [ -r /etc/X11/Xsession ]; then
-        exec /etc/X11/Xsession
-      fi
-
+      if [ -r /etc/X11/xinit/Xsession ]; then exec /etc/X11/xinit/Xsession; fi
+      if [ -r /etc/X11/Xsession ]; then exec /etc/X11/Xsession; fi
       if command -v gnome-session >/dev/null 2>&1; then
         export GNOME_SHELL_SESSION_MODE=classic
         export XDG_SESSION_DESKTOP=GNOME
         export XDG_CURRENT_DESKTOP=GNOME
         exec gnome-session
       fi
-
       exec /usr/bin/xterm
 
-- name: Enable and start xrdp service
+- name: Install Xorg server
+  become: true
+  ansible.builtin.package:
+    name: xorg-x11-server-Xorg
+    state: present
+  register: xorg_srv
+
+- name: Ensure Xorg session exists
+  become: true
+  ansible.builtin.blockinfile:
+    path: /etc/xrdp/xrdp.ini
+    marker: "; {mark} MANAGED XORG SESSION"
+    insertafter: '^\[Xvnc\]'
+    block: |
+      [Xorg]
+      name=Xorg
+      lib=libxorgxrdp.so
+      username=ask
+      password=ask
+      ip=127.0.0.1
+      port=-1
+      code=20
+  register: xrdp_ini_xorg
+
+- name: Ensure sesman uses /usr/libexec/Xorg
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/xrdp/sesman.ini
+    regexp: '^param=.*/Xorg$'
+    line: 'param=/usr/libexec/Xorg'
+    insertafter: '^\[Xorg\]'
+    backup: true
+  register: sesman_xorg_path
+  failed_when: false
+
+- name: Enable and start xrdp
   become: true
   ansible.builtin.service:
     name: xrdp
