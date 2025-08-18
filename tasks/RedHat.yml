@@ -190,6 +190,12 @@
     backup: true
   register: xrdp_disable_xvnc
 
+- name: Verify libxorgxrdp.so is accessible to xrdp
+  become: true
+  ansible.builtin.shell: |
+    test -r /usr/lib64/xrdp/libxorgxrdp.so || test -r /usr/lib/xrdp/libxorgxrdp.so
+  changed_when: false
+
 - name: Enable and start xrdp
   become: true
   ansible.builtin.service:
@@ -225,50 +231,24 @@
     state: started
     enabled: true
 
-- name: Check if firewalld is active
-  become: true
-  ansible.builtin.command: systemctl is-active firewalld
-  register: firewalld_state
-  changed_when: false
-  failed_when: false
+- name: Gather service facts
+  ansible.builtin.service_facts:
 
-- name: Open RDP in firewalld
+- name: Allow RDP in firewalld when running
   become: true
   ansible.posix.firewalld:
     service: rdp
-    permanent: true
     state: enabled
-    immediate: "{{ firewalld_state.stdout == 'active' }}"
+    permanent: true
+    immediate: true
+  when:
+    - "'firewalld.service' in ansible_facts.services"
+    - ansible_facts.services['firewalld.service'].state == 'running'
 
-- name: Install SELinux utils and xrdp policy
+- name: Install SELinux utils/policy
   become: true
   ansible.builtin.package:
     name:
       - policycoreutils-python-utils
       - xrdp-selinux
     state: present
-
-- name: List SELinux booleans
-  become: true
-  ansible.builtin.command: semanage boolean -l
-  register: sebools
-  changed_when: false
-  failed_when: sebools.rc != 0
-  when: ansible_selinux.status == "enabled"
-
-- name: Allow xrdp to connect to unreserved ports
-  become: true
-  ansible.posix.seboolean:
-    name: xrdp_connect_all_unreserved_ports
-    state: true
-    persistent: true
-  when:
-    - ansible_selinux.status == "enabled"
-    - sebools.stdout is defined
-    - "'xrdp_connect_all_unreserved_ports' in sebools.stdout"
-
-- name: Wait for xrdp to listen on 3389
-  ansible.builtin.wait_for:
-    port: 3389
-    timeout: 30
-    state: started
