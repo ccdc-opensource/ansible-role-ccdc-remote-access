@@ -29,6 +29,16 @@
       - xorg-x11-xinit
     state: present
 
+- name: Install XRDP desktop prerequisites
+  become: true
+  ansible.builtin.package:
+    name:
+      - dbus-x11
+      - gnome-session
+      - gnome-shell
+      - gnome-classic-session
+    state: present
+
 - name: Write /etc/xrdp/startwm.sh
   become: true
   ansible.builtin.copy:
@@ -37,14 +47,22 @@
     content: |
       #!/bin/sh
       [ -r /etc/profile ] && . /etc/profile
-      if [ -r /etc/X11/xinit/Xsession ]; then exec /etc/X11/xinit/Xsession; fi
-      if [ -r /etc/X11/Xsession ]; then exec /etc/X11/Xsession; fi
-      if command -v gnome-session >/dev/null 2>&1; then
-        export GNOME_SHELL_SESSION_MODE=classic
-        export XDG_SESSION_DESKTOP=GNOME
-        export XDG_CURRENT_DESKTOP=GNOME
-        exec gnome-session
+
+      export XDG_SESSION_TYPE=x11
+      export GNOME_SHELL_SESSION_MODE=classic
+      export XDG_SESSION_DESKTOP=GNOME
+      export XDG_CURRENT_DESKTOP=GNOME
+
+      if command -v dbus-launch >/dev/null 2>&1; then
+        exec dbus-launch --exit-with-session gnome-session --session=gnome-classic --disable-acceleration-check
       fi
+
+      if command -v gnome-session >/dev/null 2>&1; then
+        exec gnome-session --session=gnome-classic --disable-acceleration-check
+      fi
+
+      [ -r /etc/X11/xinit/Xsession ] && exec /etc/X11/xinit/Xsession
+      [ -r /etc/X11/Xsession ] && exec /etc/X11/Xsession
       exec /usr/bin/xterm
 
 - name: Ensure Xorg block in /etc/xrdp/sesman.ini
