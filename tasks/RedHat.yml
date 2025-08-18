@@ -172,8 +172,8 @@
     path: /etc/xrdp/xrdp.ini
     regexp: '(?ms)^\[Xvnc\]\n.*?(?=^\[|$\Z)'
     replace: '; [Xvnc] disabled by Ansible\n'
+    backup: true
   register: xrdp_disable_xvnc
-  backup: true
 
 - name: Enable and start xrdp
   become: true
@@ -242,7 +242,7 @@
 
 - name: Allow xrdp to connect to unreserved ports
   become: true
-  ansible.builtin.seboolean:
+  ansible.posix.seboolean:
     name: xrdp_connect_all_unreserved_ports
     state: true
     persistent: true
