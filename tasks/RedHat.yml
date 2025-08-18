@@ -62,9 +62,10 @@
 
 - name: Check if Xorg is already present
   become: true
-  ansible.builtin.shell: "grep -q '^\\[Xorg\\]' /etc/xrdp/xrdp.ini || true"
+  ansible.builtin.command: grep -q '^\[Xorg\]' /etc/xrdp/xrdp.ini
   register: has_xorg
   changed_when: false
+  failed_when: has_xorg.rc not in [0, 1]
 
 - name: Ensure Xorg session exists
   become: true
@@ -82,7 +83,31 @@
       port=-1
       code=20
   register: xrdp_ini_xorg
-  when: has_xorg.rc != 0
+  when: has_xorg.rc == 1
+
+- name: Check if Xorg is already present in sesman.ini
+  become: true
+  ansible.builtin.command: grep -q '^\[Xorg\]' /etc/xrdp/sesman.ini
+  register: has_sesman_xorg
+  changed_when: false
+  failed_when: has_sesman_xorg.rc not in [0, 1]
+
+- name: Ensure Xorg block in sesman.ini
+  become: true
+  ansible.builtin.blockinfile:
+    path: /etc/xrdp/sesman.ini
+    marker: "; {mark} MANAGED XORG SESMAN"
+    insertafter: EOF
+    block: |
+      [Xorg]
+      param=/usr/libexec/Xorg
+      param=-noreset
+      param=-nolisten
+      param=tcp
+      param=-logfile
+      param=.xorgxrdp.%s.log
+  register: sesman_xorg_block
+  when: has_sesman_xorg.rc == 1
 
 - name: Ensure sesman uses /usr/libexec/Xorg
   become: true
@@ -95,19 +120,19 @@
   register: sesman_xorg_path
   failed_when: false
 
-- name: Restart xrdp if Xorg config changed
-  become: true
-  ansible.builtin.service:
-    name: xrdp
-    state: restarted
-  when: xorg_srv.changed or xrdp_ini_xorg.changed or sesman_xorg_path.changed
-
 - name: Enable and start xrdp
   become: true
   ansible.builtin.service:
     name: xrdp
     state: started
     enabled: true
+
+- name: Restart xrdp if Xorg config changed
+  become: true
+  ansible.builtin.service:
+    name: xrdp
+    state: restarted
+  when: xorg_srv.changed or xrdp_ini_xorg.changed or sesman_xorg_path.changed or sesman_xorg_block.changed
 
 - name: Install firewalld
   become: true
