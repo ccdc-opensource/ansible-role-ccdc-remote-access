@@ -46,6 +46,13 @@
       fi
       exec /usr/bin/xterm
 
+- name: Remove earlier managed Xorg session block
+  become: true
+  ansible.builtin.blockinfile:
+    path: /etc/xrdp/xrdp.ini
+    marker: "; {mark} MANAGED XORG SESSION"
+    state: absent
+
 - name: Install Xorg server
   become: true
   ansible.builtin.package:
@@ -53,12 +60,18 @@
     state: present
   register: xorg_srv
 
+- name: Check if Xorg is already present
+  become: true
+  ansible.builtin.command: grep -c '^\[Xorg\]' /etc/xrdp/xrdp.ini || true
+  register: has_xorg
+  changed_when: false
+
 - name: Ensure Xorg session exists
   become: true
   ansible.builtin.blockinfile:
     path: /etc/xrdp/xrdp.ini
     marker: "; {mark} MANAGED XORG SESSION"
-    insertafter: '^\[Xvnc\]'
+    insertafter: EOF
     block: |
       [Xorg]
       name=Xorg
@@ -69,17 +82,25 @@
       port=-1
       code=20
   register: xrdp_ini_xorg
+  when: has_xorg.stdout | int == 0
 
 - name: Ensure sesman uses /usr/libexec/Xorg
   become: true
   ansible.builtin.lineinfile:
     path: /etc/xrdp/sesman.ini
-    regexp: '^param=.*/Xorg$'
+    regexp: '^param=Xorg$|^param=.*/Xorg$'
     line: 'param=/usr/libexec/Xorg'
     insertafter: '^\[Xorg\]'
     backup: true
   register: sesman_xorg_path
   failed_when: false
+
+- name: Restart xrdp if Xorg config changed
+  become: true
+  ansible.builtin.service:
+    name: xrdp
+    state: restarted
+  when: xorg_srv.changed or xrdp_ini_xorg.changed or sesman_xorg_path.changed
 
 - name: Enable and start xrdp
   become: true
