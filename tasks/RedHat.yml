@@ -76,7 +76,7 @@
       param=.xorgxrdp.%s.log
   register: sesman_xorg
 
-- name: Make startwm.sh default
+- name: Point sesman to startwm.sh as the default
   become: true
   ansible.builtin.ini_file:
     path: /etc/xrdp/sesman.ini
@@ -99,14 +99,14 @@
       password=ask
   register: xrdp_ini_xorg
 
-- name: Set lib=libxup.so in Xorg
+- name: Set Xorg session lib=libxup.so
   become: true
   ansible.builtin.ini_file:
     path: /etc/xrdp/xrdp.ini
     section: Xorg
     option: lib
     value: libxup.so
-  register: xorg_lib_line
+  register: ini_lib
 
 - name: Ensure port=-1 in Xorg
   become: true
@@ -124,7 +124,7 @@
     section: Xorg
     option: ip
     state: absent
-  register: xorg_ip_absent
+  register: remove_ip_ini
 
 - name: Ensure code=20 in [Xorg]
   become: true
@@ -159,9 +159,9 @@
   when: >
     sesman_xorg.changed or
     xrdp_ini_xorg.changed or
-    xorg_lib_line.changed or
+    ini_lib.changed or
     xorg_port_line.changed or
-    xorg_ip_absent.changed or
+    remove_ip_ini.changed or
     xorg_code_line.changed or
     xrdp_disable_xvnc.changed or
     sesman_default.changed
