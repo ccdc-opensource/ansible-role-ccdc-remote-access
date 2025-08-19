@@ -139,13 +139,19 @@
   when: not xorg_mod64.stat.exists and xorg_mod32.stat.exists
   register: link_xorg_32
 
+- name: Restore SELinux context on linked lib
+  become: true
+  ansible.builtin.command: restorecon -v /usr/lib64/xrdp/libxorgxrdp.so
+  changed_when: false
+  failed_when: false
+
 - name: Detect absolute lib path for Xorg
   ansible.builtin.set_fact:
     xorg_lib_path: >-
       {{ '/usr/lib64/xrdp/libxorgxrdp.so' if xorg_mod64.stat.exists
          else '/usr/lib/xrdp/libxorgxrdp.so' }}
 
-- name: Set lib to libxorgxrdp.so in Xorg
+- name: Set lib= in Xorg to the detected path
   become: true
   ansible.builtin.ini_file:
     path: /etc/xrdp/xrdp.ini
