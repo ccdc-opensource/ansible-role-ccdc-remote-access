@@ -108,7 +108,7 @@
     value: libxup.so
   register: ini_lib
 
-- name: Ensure Xorg session
+- name: Ensure code=20 in Xorg
   become: true
   ansible.builtin.ini_file:
     path: /etc/xrdp/xrdp.ini
@@ -116,6 +116,15 @@
     option: code
     value: "20"
   register: ini_code
+
+- name: Ensure port=-1 in Xorg
+  become: true
+  ansible.builtin.ini_file:
+    path: /etc/xrdp/xrdp.ini
+    section: Xorg
+    option: port
+    value: "-1"
+  register: ini_port
 
 - name: Remove ip from Xorg
   become: true
@@ -152,6 +161,7 @@
     xrdp_ini_xorg.changed or
     ini_lib.changed or
     ini_code.changed or
+    ini_port.changed or
     remove_ip_ini.changed or
     xrdp_disable_xvnc.changed or
     sesman_default.changed
