@@ -99,23 +99,69 @@
       password=ask
   register: xrdp_ini_xorg
 
-- name: Set Xorg session lib=libxup.so
+- name: Ensure xrdp lib dirs exist
+  become: true
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - /usr/lib64/xrdp
+    - /usr/lib/xrdp
+
+- name: Locate xorgxrdp module (64-bit)
+  become: true
+  ansible.builtin.stat:
+    path: /usr/lib64/xorg/modules/libxorgxrdp.so
+  register: xorg_mod64
+
+- name: Locate xorgxrdp module (32-bit)
+  become: true
+  ansible.builtin.stat:
+    path: /usr/lib/xorg/modules/libxorgxrdp.so
+  register: xorg_mod32
+
+- name: Symlink libxorgxrdp.so into /usr/lib64/xrdp
+  become: true
+  ansible.builtin.file:
+    src: /usr/lib64/xorg/modules/libxorgxrdp.so
+    dest: /usr/lib64/xrdp/libxorgxrdp.so
+    state: link
+  when: xorg_mod64.stat.exists
+  register: link_xorg_64
+
+- name: Symlink libxorgxrdp.so into /usr/lib/xrdp
+  become: true
+  ansible.builtin.file:
+    src: /usr/lib/xorg/modules/libxorgxrdp.so
+    dest: /usr/lib/xrdp/libxorgxrdp.so
+    state: link
+  when: not xorg_mod64.stat.exists and xorg_mod32.stat.exists
+  register: link_xorg_32
+
+- name: Detect absolute lib path for Xorg
+  ansible.builtin.set_fact:
+    xorg_lib_path: >-
+      {{ '/usr/lib64/xrdp/libxorgxrdp.so' if xorg_mod64.stat.exists
+         else '/usr/lib/xrdp/libxorgxrdp.so' }}
+
+- name: Set lib to libxorgxrdp.so in Xorg
   become: true
   ansible.builtin.ini_file:
     path: /etc/xrdp/xrdp.ini
     section: Xorg
     option: lib
-    value: libxup.so
-  register: ini_lib
+    value: "{{ xorg_lib_path }}"
+  register: xorg_lib_line
 
-- name: Ensure Xorg session
+- name: Ensure port=-1 in Xorg
   become: true
   ansible.builtin.ini_file:
     path: /etc/xrdp/xrdp.ini
     section: Xorg
-    option: code
-    value: "20"
-  register: ini_code
+    option: port
+    value: "-1"
+  register: xorg_port_line
 
 - name: Remove ip from Xorg
   become: true
@@ -124,7 +170,16 @@
     section: Xorg
     option: ip
     state: absent
-  register: remove_ip_ini
+  register: xorg_ip_absent
+
+- name: Ensure code=20 in [Xorg]
+  become: true
+  ansible.builtin.ini_file:
+    path: /etc/xrdp/xrdp.ini
+    section: Xorg
+    option: code
+    value: "20"
+  register: xorg_code_line
 
 - name: Disable Xvnc
   become: true
@@ -150,11 +205,14 @@
   when: >
     sesman_xorg.changed or
     xrdp_ini_xorg.changed or
-    ini_lib.changed or
-    ini_code.changed or
-    remove_ip_ini.changed or
+    xorg_lib_line.changed or
+    xorg_port_line.changed or
+    xorg_ip_absent.changed or
+    xorg_code_line.changed or
     xrdp_disable_xvnc.changed or
-    sesman_default.changed
+    sesman_default.changed or
+    link_xorg_64.changed | default(false) or
+    link_xorg_32.changed | default(false)
 
 - name: Gather service facts
   ansible.builtin.service_facts:
