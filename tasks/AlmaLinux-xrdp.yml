@@ -1,0 +1,35 @@
+---
+- name: install epel-release
+  ansible.builtin.package:
+    name: epel-release
+    state: present
+  become: true
+
+- name: Install xrdp
+  ansible.builtin.package:
+    name: xrdp
+    state: present
+  become: true
+
+- name: Enable multi user
+  ansible.builtin.command: systemctl set-default multi-user
+  become: true
+
+- name: Disable autologin
+  ansible.builtin.command: systemctl disable gdm
+  become: true
+
+- name: Ensure X11UseLocalhost is set to anybody
+  ansible.builtin.lineinfile:
+    path: /etc/xrdp/sesman.ini
+    regexp: "^(#)?TerminalServerUsers"
+    line: "#TerminalServerUsers=tsusers"
+    state: present
+  become: true
+
+- name: Enable XRDP service
+  ansible.builtin.systemd_service:
+    name: xrdp
+    state: started
+    enabled: true
+  become: true
