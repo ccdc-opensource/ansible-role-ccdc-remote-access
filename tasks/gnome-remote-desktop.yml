@@ -3,7 +3,7 @@
   ansible.builtin.file:
     path: /srv/gnome-remote-desktop
     state: directory
-  become: true 
+  become: true
 
 - name: Generate certificate
   ansible.builtin.command: openssl req -new -newkey rsa:4096 -days 720 -nodes -x509 -subj /C=GB/ST=NONE/L=NONE/O=GNOME/CN=rdp.internal -out /srv/gnome-remote-desktop/tls.crt -keyout /srv/gnome-remote-desktop/tls.key
