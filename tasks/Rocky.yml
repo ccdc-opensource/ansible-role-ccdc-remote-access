@@ -38,7 +38,7 @@
   become: true
   ansible.builtin.copy:
     dest: /etc/xrdp/startwm.sh
-    mode: '0755'
+    mode: "0755"
     content: |
       #!/bin/sh
       [ -r /etc/profile ] && . /etc/profile
@@ -193,4 +193,3 @@
       - policycoreutils-python-utils
       - xrdp-selinux
     state: present
-

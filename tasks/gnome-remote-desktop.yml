@@ -23,4 +23,3 @@
 - name: Enable RDP service
   ansible.builtin.command: systemctl --now enable gnome-remote-desktop.service
   become: true
-
