@@ -20,4 +20,4 @@
 - name: reboot
   ansible.builtin.reboot:
   become: true
-  
+
