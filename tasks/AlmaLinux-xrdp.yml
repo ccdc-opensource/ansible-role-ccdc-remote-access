@@ -5,7 +5,7 @@
     state: present
   become: true
 
-- name: Install xrpd
+- name: Install xrdp
   ansible.builtin.package:
     name: xrdp
     state: present
