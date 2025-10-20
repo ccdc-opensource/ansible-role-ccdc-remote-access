@@ -33,7 +33,3 @@
     state: started
     enabled: true
   become: true
-
-- name: reboot
-  ansible.builtin.reboot:
-  become: true
