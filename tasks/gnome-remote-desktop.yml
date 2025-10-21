@@ -1,20 +1,32 @@
 # Setup Gnome Remote Desktop
-- name: ensure gnome-remote-desktop folder exists
+- name: make sure dir exists
   ansible.builtin.file:
-    path: /srv/gnome-remote-desktop
+    path: ~gnome-remote-desktop/.local/share/gnome-remote-desktop
     state: directory
+    owner: gnome-remote-desktop
+    group: gnome-remote-desktop
+    mode: "0700"
   become: true
 
 - name: Generate certificate
-  ansible.builtin.command: openssl req -new -newkey rsa:4096 -days 720 -nodes -x509 -subj /C=GB/ST=NONE/L=NONE/O=GNOME/CN=rdp.internal -out /srv/gnome-remote-desktop/tls.crt -keyout /srv/gnome-remote-desktop/tls.key
+  ansible.builtin.command: openssl req -new -newkey rsa:4096 -days 720 -nodes -x509 -subj /C=GB/ST=NONE/L=NONE/O=GNOME/CN=rdp.local -out ~gnome-remote-desktop/.local/share/gnome-remote-desktop/tls.crt -keyout ~gnome-remote-desktop/.local/share/gnome-remote-desktop/tls.key
+  become: true
+
+- name: Set permissions on certificate directory
+  ansible.builtin.file:
+    path: ~gnome-remote-desktop/.local/share/gnome-remote-desktop
+    owner: gnome-remote-desktop
+    group: gnome-remote-desktop
+    mode: "0700"
+    recurse: true
   become: true
 
 - name: Add TLS cert
-  ansible.builtin.command: grdctl --system rdp set-tls-key /srv/gnome-remote-desktop/tls.key
+  ansible.builtin.command: grdctl --system rdp set-tls-key ~gnome-remote-desktop/.local/share/gnome-remote-desktop/tls.key
   become: true
 
 - name: Add TLS key
-  ansible.builtin.command: grdctl --system rdp set-tls-cert /srv/gnome-remote-desktop/tls.crt
+  ansible.builtin.command: grdctl --system rdp set-tls-cert ~gnome-remote-desktop/.local/share/gnome-remote-desktop/tls.crt
   become: true
 
 - name: Setup RDP credentials
