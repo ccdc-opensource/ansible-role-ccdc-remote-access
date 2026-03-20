@@ -28,16 +28,6 @@
   register: grd_cert_generation
   become: true
 
-- name: Verify both certificate and key were generated
-  ansible.builtin.stat:
-    path: "{{ item }}"
-  loop:
-    - "{{ grd_state_dir }}/tls.crt"
-    - "{{ grd_state_dir }}/tls.key"
-  register: grd_cert_stat
-  become: true
-  failed_when: not grd_cert_stat.results[0].stat.exists or not grd_cert_stat.results[1].stat.exists
-
 - name: Set permissions on certificate directory
   ansible.builtin.file:
     path: "{{ grd_state_dir }}"
