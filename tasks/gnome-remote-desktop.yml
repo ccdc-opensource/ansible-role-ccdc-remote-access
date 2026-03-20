@@ -2,8 +2,7 @@
 - name: Set GNOME Remote Desktop facts
   ansible.builtin.set_fact:
     grd_state_dir: /var/lib/gnome-remote-desktop/.local/share/gnome-remote-desktop
-    grd_display_manager_service: gdm
-    grd_display_manager_unit: gdm.service
+    grd_display_manager_service: "{{ 'gdm3' if ansible_distribution == 'Ubuntu' else 'gdm' }}"
     grd_gdm_custom_conf: "{{ '/etc/gdm3/custom.conf' if ansible_distribution == 'Ubuntu' else '/etc/gdm/custom.conf' }}"
 
 - name: Validate GRD credentials
@@ -26,7 +25,18 @@
   ansible.builtin.command: openssl req -new -newkey rsa:4096 -days 720 -nodes -x509 -subj /C=GB/ST=NONE/L=NONE/O=GNOME/CN=rdp.local -out "{{ grd_state_dir }}/tls.crt" -keyout "{{ grd_state_dir }}/tls.key"
   args:
     creates: "{{ grd_state_dir }}/tls.key"
+  register: grd_cert_generation
   become: true
+
+- name: Verify both certificate and key were generated
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ grd_state_dir }}/tls.crt"
+    - "{{ grd_state_dir }}/tls.key"
+  register: grd_cert_stat
+  become: true
+  failed_when: not grd_cert_stat.results[0].stat.exists or not grd_cert_stat.results[1].stat.exists
 
 - name: Set permissions on certificate directory
   ansible.builtin.file:
