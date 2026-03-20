@@ -2,7 +2,8 @@
 - name: Set GNOME Remote Desktop facts
   ansible.builtin.set_fact:
     grd_state_dir: /var/lib/gnome-remote-desktop/.local/share/gnome-remote-desktop
-    grd_display_manager_service: "{{ 'gdm3' if ansible_distribution == 'Ubuntu' else 'gdm' }}"
+    grd_display_manager_service: gdm
+    grd_display_manager_unit: gdm.service
     grd_gdm_custom_conf: "{{ '/etc/gdm3/custom.conf' if ansible_distribution == 'Ubuntu' else '/etc/gdm/custom.conf' }}"
 
 - name: Validate GRD credentials
@@ -104,6 +105,6 @@
 - name: Enable RDP service
   ansible.builtin.systemd:
     name: gnome-remote-desktop.service
-    state: started
+    state: restarted
     enabled: true
   become: true
