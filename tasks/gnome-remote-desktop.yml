@@ -128,19 +128,3 @@
     state: started
     enabled: true
   become: true
-  when: ansible_distribution == "Ubuntu"
-
-- name: Wait for gnome-remote-desktop to listen on RDP port
-  ansible.builtin.wait_for:
-    host: 127.0.0.1
-    port: 3389
-    state: started
-    timeout: 30
-  when: ansible_distribution == "Ubuntu"
-
-- name: Restart GDM after gnome-remote-desktop is fully up
-  ansible.builtin.systemd:
-    name: "{{ grd_display_manager_service }}"
-    state: restarted
-  become: true
-  when: ansible_distribution == "Ubuntu"
