@@ -1,7 +1,20 @@
-# Setup Gnome Remote Desktop
-- name: make sure dir exists
+# Setup GNOME Remote Desktop
+- name: Set GNOME Remote Desktop facts
+  ansible.builtin.set_fact:
+    grd_state_dir: /var/lib/gnome-remote-desktop/.local/share/gnome-remote-desktop
+    grd_display_manager_service: "{{ 'gdm3' if ansible_distribution == 'Ubuntu' else 'gdm' }}"
+    grd_gdm_custom_conf: "{{ '/etc/gdm3/custom.conf' if ansible_distribution == 'Ubuntu' else '/etc/gdm/custom.conf' }}"
+
+- name: Validate GRD credentials
+  ansible.builtin.assert:
+    that:
+      - rdp_user | length > 0
+      - rdp_password | length > 0
+    fail_msg: "rdp_user and rdp_password must both be set for GNOME Remote Desktop system mode"
+
+- name: Ensure GNOME Remote Desktop state directory exists
   ansible.builtin.file:
-    path: ~gnome-remote-desktop/.local/share/gnome-remote-desktop
+    path: "{{ grd_state_dir }}"
     state: directory
     owner: gnome-remote-desktop
     group: gnome-remote-desktop
@@ -9,28 +22,80 @@
   become: true
 
 - name: Generate certificate
-  ansible.builtin.command: openssl req -new -newkey rsa:4096 -days 720 -nodes -x509 -subj /C=GB/ST=NONE/L=NONE/O=GNOME/CN=rdp.local -out ~gnome-remote-desktop/.local/share/gnome-remote-desktop/tls.crt -keyout ~gnome-remote-desktop/.local/share/gnome-remote-desktop/tls.key
+  ansible.builtin.command: openssl req -new -newkey rsa:4096 -days 720 -nodes -x509 -subj /C=GB/ST=NONE/L=NONE/O=GNOME/CN=rdp.local -out "{{ grd_state_dir }}/tls.crt" -keyout "{{ grd_state_dir }}/tls.key"
+  args:
+    creates: "{{ grd_state_dir }}/tls.key"
+  register: grd_cert_generation
   become: true
 
 - name: Set permissions on certificate directory
   ansible.builtin.file:
-    path: ~gnome-remote-desktop/.local/share/gnome-remote-desktop
+    path: "{{ grd_state_dir }}"
     owner: gnome-remote-desktop
     group: gnome-remote-desktop
     mode: "0700"
     recurse: true
   become: true
 
-- name: Add TLS cert
-  ansible.builtin.command: grdctl --system rdp set-tls-key ~gnome-remote-desktop/.local/share/gnome-remote-desktop/tls.key
+- name: Disable GDM automatic login
+  ansible.builtin.ini_file:
+    path: "{{ grd_gdm_custom_conf }}"
+    section: daemon
+    option: AutomaticLoginEnable
+    value: "False"
+    mode: "0644"
+  become: true
+
+- name: Remove GDM automatic login user
+  ansible.builtin.ini_file:
+    path: "{{ grd_gdm_custom_conf }}"
+    section: daemon
+    option: AutomaticLogin
+    state: absent
+    mode: "0644"
+  become: true
+
+- name: Check current default systemd target
+  ansible.builtin.command: systemctl get-default
+  register: grd_default_target
+  changed_when: false
+  become: true
+
+- name: Set default boot target to graphical
+  ansible.builtin.command: systemctl set-default graphical.target
+  when: grd_default_target.stdout != "graphical.target"
+  become: true
+
+- name: Ensure GDM is enabled and started
+  ansible.builtin.systemd:
+    name: "{{ grd_display_manager_service }}"
+    state: started
+    enabled: true
+  become: true
+
+- name: Ensure optional local RDP login user exists
+  ansible.builtin.user:
+    name: "{{ rdp_login_user }}"
+    state: present
+    create_home: true
+    shell: /bin/bash
+    password: "{{ rdp_login_user_password_hash if (rdp_login_user_password_hash | length > 0) else omit }}"
+    groups: "{{ rdp_login_user_groups | join(',') if (rdp_login_user_groups | length > 0) else omit }}"
+    append: "{{ rdp_login_user_append_groups | bool }}"
+  when: rdp_login_user | length > 0
   become: true
 
 - name: Add TLS key
-  ansible.builtin.command: grdctl --system rdp set-tls-cert ~gnome-remote-desktop/.local/share/gnome-remote-desktop/tls.crt
+  ansible.builtin.command: grdctl --system rdp set-tls-key "{{ grd_state_dir }}/tls.key"
+  become: true
+
+- name: Add TLS cert
+  ansible.builtin.command: grdctl --system rdp set-tls-cert "{{ grd_state_dir }}/tls.crt"
   become: true
 
 - name: Setup RDP credentials
   ansible.builtin.command: grdctl --system rdp set-credentials "{{ rdp_user }}" "{{ rdp_password }}"
+  no_log: true
   become: true
 
 - name: Enable RDP
@@ -38,5 +103,8 @@
   become: true
 
 - name: Enable RDP service
-  ansible.builtin.command: systemctl --now enable gnome-remote-desktop.service
+  ansible.builtin.systemd:
+    name: gnome-remote-desktop.service
+    state: started
+    enabled: true
   become: true
