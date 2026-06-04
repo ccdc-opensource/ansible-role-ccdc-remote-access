@@ -4,9 +4,9 @@
   ansible.builtin.include_tasks: Ubuntu-xrdp.yml
   when: ansible_distribution == "Ubuntu" and (ansible_distribution_major_version == "20" or ansible_distribution_major_version == "22")
 
-- name: Install gnome-remote-desktop for Ubuntu 24
+- name: Install gnome-remote-desktop for Ubuntu 24 or 26
   ansible.builtin.include_tasks: gnome-remote-desktop.yml
-  when: ansible_distribution == "Ubuntu" and ansible_distribution_major_version == "24"
+  when: ansible_distribution == "Ubuntu" and (ansible_distribution_major_version == "24" or ansible_distribution_major_version == "26")
 
 # Shared Tasks between Ubuntu RDP methods
 
