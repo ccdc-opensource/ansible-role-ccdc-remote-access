@@ -5,10 +5,13 @@
     state: present
   become: true
 
-- name: Install xrdp
+- name: Install xrdp packages
   ansible.builtin.package:
-    name: xrdp
+    name:
+      - xrdp
+      - xorgxrdp
     state: present
+  register: xrdp_packages
   become: true
 
 - name: Enable multi user
@@ -27,9 +30,13 @@
     state: present
   become: true
 
-- name: Enable XRDP service
+- name: Enable and restart XRDP services
   ansible.builtin.systemd_service:
-    name: xrdp
-    state: started
+    name: "{{ item }}"
+    state: restarted
     enabled: true
+  loop:
+    - xrdp
+    - xrdp-sesman
+  when: xrdp_packages.changed
   become: true
