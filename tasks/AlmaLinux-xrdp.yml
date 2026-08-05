@@ -5,12 +5,13 @@
     state: present
   become: true
 
-- name: Install xrdp
+- name: Install xrdp packages
   ansible.builtin.package:
     name:
       - xrdp
       - xorgxrdp
     state: present
+  register: xrdp_packages
   become: true
 
 - name: Enable multi user
@@ -37,4 +38,5 @@
   loop:
     - xrdp
     - xrdp-sesman
+  when: xrdp_packages.changed
   become: true
