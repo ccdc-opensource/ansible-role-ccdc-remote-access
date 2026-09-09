@@ -1,0 +1,29 @@
+---
+- name: Install rustdesk
+  community.general.homebrew:
+    name: rustdesk
+    state: present
+
+- name: Allow rustdesk permissions
+  ansible.builtin.file:
+    src: files/rustdesk-permissions.sh
+    dest: /tmp/rustdesk-permissions.sh
+    owner: admin
+    group: wheel
+    mode: "0644"
+
+- name: Run RustDesk permissions script
+  ansible.builtin.command: /tmp/rustdesk-permissions.sh
+  become: true
+
+- name: Copy RustDesk service script
+  ansible.builtin.copy:
+    src: files/rustdesk-plist.sh
+    dest: /tmp/rustdesk-plist.sh
+    owner: admin
+    group: wheel
+    mode: "0644"
+
+- name: Run RustDesk service script
+  ansible.builtin.command: /tmp/rustdesk-plist.sh
+  become: true
