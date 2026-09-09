@@ -1,6 +1,9 @@
 #!/bin/bash
 
-source ~/.zprofile
+if [[ -n "${HOME:-}" && -f "${HOME}/.zprofile" ]]; then
+  source "${HOME}/.zprofile"
+fi
+
 set -euo pipefail
 
 update_tcc_database() {

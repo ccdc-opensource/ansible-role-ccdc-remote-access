@@ -5,12 +5,13 @@
     state: present
 
 - name: Allow rustdesk permissions
-  ansible.builtin.file:
+  ansible.builtin.copy:
     src: files/rustdesk-permissions.sh
     dest: /tmp/rustdesk-permissions.sh
-    owner: admin
+    owner: "{{ ansible_user }}"
     group: wheel
-    mode: "0644"
+    mode: "0755"
+  become: true
 
 - name: Run RustDesk permissions script
   ansible.builtin.command: /tmp/rustdesk-permissions.sh
@@ -20,10 +21,17 @@
   ansible.builtin.copy:
     src: files/rustdesk-plist.sh
     dest: /tmp/rustdesk-plist.sh
-    owner: admin
+    owner: "{{ ansible_user }}"
     group: wheel
-    mode: "0644"
+    mode: "0755"
+  become: true
 
 - name: Run RustDesk service script
-  ansible.builtin.command: /tmp/rustdesk-plist.sh
+  ansible.builtin.command:
+    argv:
+      - /tmp/rustdesk-plist.sh
+      - --app-path
+      - /Applications/RustDesk.app
+      - --target-user
+      - "{{ ansible_user }}"
   become: true

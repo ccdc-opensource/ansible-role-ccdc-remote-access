@@ -3,8 +3,35 @@
 set -euo pipefail
 
 APP_PATH="${RUSTDESK_APP_PATH:-/Applications/RustDesk.app}"
-TARGET_USER="${RUSTDESK_TARGET_USER:-}"
-SUDO_CMD="sudo"
+TARGET_USER="${TARGET_USER:-${RUSTDESK_TARGET_USER:-}}"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --app-path)
+      APP_PATH="$2"
+      shift 2
+      ;;
+    --target-user)
+      TARGET_USER="$2"
+      shift 2
+      ;;
+    -h|--help)
+      echo "Usage: $0 [--app-path /Applications/RustDesk.app] [--target-user username]"
+      exit 0
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      echo "Usage: $0 [--app-path /Applications/RustDesk.app] [--target-user username]" >&2
+      exit 1
+      ;;
+  esac
+done
+
+if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
+  SUDO_CMD="sudo"
+else
+  SUDO_CMD=""
+fi
 
 if [[ -z "$TARGET_USER" ]]; then
   if [[ -n "${SUDO_USER:-}" && "$SUDO_USER" != "root" ]]; then
@@ -29,7 +56,7 @@ fi
 APP_NAME="$(basename "$APP_PATH" .app)"
 APP_NAME_LOWER="$(echo "$APP_NAME" | tr '[:upper:]' '[:lower:]')"
 FULL_NAME="com.carriez.${APP_NAME}"
-BUNDLE_ID="$($SUDO_CMD /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP_PATH/Contents/Info.plist" 2>/dev/null || true)"
+BUNDLE_ID="$(if command -v /usr/libexec/PlistBuddy >/dev/null 2>&1; then $SUDO_CMD /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP_PATH/Contents/Info.plist" 2>/dev/null || true; fi)"
 if [[ -z "$BUNDLE_ID" ]]; then
   BUNDLE_ID="com.carriez.${APP_NAME_LOWER}"
 fi
@@ -39,7 +66,7 @@ DAEMON_PATH="/Library/LaunchDaemons/${FULL_NAME}_service.plist"
 ROOT_PREF_PATH="/var/root/Library/Preferences/${FULL_NAME}"
 USER_HOME="$($SUDO_CMD dscl . -read "/Users/$TARGET_USER" NFSHomeDirectory 2>/dev/null | sed 's/^NFSHomeDirectory:[[:space:]]*//')"
 if [[ -z "$USER_HOME" ]]; then
-  USER_HOME="$HOME"
+  USER_HOME="${HOME:-/var/root}"
 fi
 USER_PREF_PATH="${USER_HOME}/Library/Preferences/${FULL_NAME}"
 
