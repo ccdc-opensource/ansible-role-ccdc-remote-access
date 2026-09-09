@@ -23,8 +23,8 @@ update_tcc_database() {
     ('kTCCServiceAccessibility', 0, 'com.carriez.rustdesk', 2, 0, 1, NULL, 'UNUSED'),
     ('kTCCServiceScreenCapture', 0, 'com.carriez.rustdesk', 2, 0, 1, NULL, 'UNUSED'),
     ('kTCCServicePostEvent', 0, 'com.carriez.rustdesk', 2, 0, 1, NULL, 'UNUSED'),
-    ('kTCCServiceAppleEvents', 0, 'com.carriez.rustdesk', 2, 0, 1, 0, 'com.apple.systemevents'),
-    EOF
+    ('kTCCServiceAppleEvents', 0, 'com.carriez.rustdesk', 2, 0, 1, 0, 'com.apple.systemevents');
+EOF
 }
 
 # Update TCC.db for all users
