@@ -5,3 +5,4 @@ rdp_login_user: ""
 rdp_login_user_password_hash: ""
 rdp_login_user_groups: []
 rdp_login_user_append_groups: true
+rustdesk_user: ""

@@ -14,9 +14,12 @@
   become: true
 
 - name: Run RustDesk permissions script
-  ansible.builtin.command: /tmp/rustdesk-permissions.sh
+  ansible.builtin.command:
+    argv:
+      - /tmp/rustdesk-permissions.sh
+      - --home
+      - "/Users/{{ rustdesk_user }}"
   become: true
-  become_user: "{{ ansible_user }}"
 
 - name: Copy RustDesk service script
   ansible.builtin.copy:
@@ -34,5 +37,5 @@
       - --app-path
       - /Applications/RustDesk.app
       - --target-user
-      - "{{ ansible_user }}"
+      - "{{ rustdesk_user }}"
   become: true

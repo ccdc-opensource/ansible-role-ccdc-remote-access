@@ -1,10 +1,35 @@
 #!/bin/bash
 
-if [[ -n "${HOME:-}" && -f "${HOME}/.zprofile" ]]; then
-  source "${HOME}/.zprofile"
+USER_HOME="${HOME:-${RUSTDESK_HOME:-}}"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --home)
+      USER_HOME="$2"
+      shift 2
+      ;;
+    -h|--help)
+      echo "Usage: $0 [--home /Users/username]"
+      exit 0
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      echo "Usage: $0 [--home /Users/username]" >&2
+      exit 1
+      ;;
+  esac
+done
+
+if [[ -n "${USER_HOME:-}" && -f "${USER_HOME}/.zprofile" ]]; then
+  source "${USER_HOME}/.zprofile"
 fi
 
 set -euo pipefail
+
+if [[ -z "${USER_HOME:-}" ]]; then
+  echo "No home directory provided. Use --home /Users/username or set HOME/RUSTDESK_HOME." >&2
+  exit 1
+fi
 
 update_tcc_database() {
   sudo sqlite3 "$1" <<-'EOF'
@@ -31,4 +56,4 @@ EOF
 update_tcc_database "/Library/Application Support/com.apple.TCC/TCC.db"
 
 # Update TCC.db for the current user
-update_tcc_database "${HOME}/Library/Application Support/com.apple.TCC/TCC.db"
+update_tcc_database "${USER_HOME}/Library/Application Support/com.apple.TCC/TCC.db"
