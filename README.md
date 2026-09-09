@@ -52,7 +52,8 @@ These variables are used when enabling GNOME Remote Desktop on Ubuntu and AlmaLi
 ### macOS hosts
 
 - installs RustDesk via Homebrew
-- updates the TCC database for the RustDesk app permissions
+- updates the macOS TCC database for the required RustDesk permissions
+  Note: Direct SQLite writes to the protected TCC databases are rejected on a normally configured modern macOS host unless the invoking process already has Full Disk Access. In practice, the relevant privacy permissions must already be in place before this script can modify the TCC database successfully.
 - creates a LaunchAgent / LaunchDaemon setup for the RustDesk service
 - configures permissions and service files in `/tmp` before applying them
 

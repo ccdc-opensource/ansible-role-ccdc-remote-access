@@ -83,13 +83,13 @@ done
 $SUDO_CMD mkdir -p "$ROOT_PREF_PATH"
 $SUDO_CMD cp -a "$USER_PREF_PATH"/* "$ROOT_PREF_PATH"/ 2>/dev/null || true
 
-AGENT_PLIST="$($SUDO_CMD curl -fsSL 'https://raw.githubusercontent.com/rustdesk/rustdesk/master/src/platform/privileges_scripts/agent.plist' \
+AGENT_PLIST="$($SUDO_CMD curl -fsSL 'https://raw.githubusercontent.com/rustdesk/rustdesk/refs/tags/1.4.9/src/platform/privileges_scripts/agent.plist' \
   | sed -e "s|com.carriez.rustdesk|${BUNDLE_ID}|g" \
         -e "s|rustdesk|${APP_NAME_LOWER}|g" \
         -e "s|RustDesk|${APP_NAME}|g" \
         -e "s|/Applications/RustDesk.app|${APP_PATH}|g")"
 
-DAEMON_PLIST="$($SUDO_CMD curl -fsSL 'https://raw.githubusercontent.com/rustdesk/rustdesk/master/src/platform/privileges_scripts/daemon.plist' \
+DAEMON_PLIST="$($SUDO_CMD curl -fsSL 'https://raw.githubusercontent.com/rustdesk/rustdesk/refs/tags/1.4.9/src/platform/privileges_scripts/daemon.plist' \
   | sed -e "s|com.carriez.rustdesk|${BUNDLE_ID}|g" \
         -e "s|rustdesk|${APP_NAME_LOWER}|g" \
         -e "s|RustDesk|${APP_NAME}|g" \
