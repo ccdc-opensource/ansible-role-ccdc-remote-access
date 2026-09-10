@@ -1,0 +1,41 @@
+---
+- name: Install rustdesk
+  community.general.homebrew_cask:
+    name: rustdesk
+    state: present
+
+- name: Allow rustdesk permissions
+  ansible.builtin.copy:
+    src: rustdesk-permissions.sh
+    dest: /tmp/rustdesk-permissions.sh
+    owner: "root"
+    group: wheel
+    mode: "0700"
+  become: true
+
+- name: Run RustDesk permissions script
+  ansible.builtin.command:
+    argv:
+      - /tmp/rustdesk-permissions.sh
+      - --home
+      - "/Users/{{ rustdesk_user }}"
+  become: true
+
+- name: Copy RustDesk service script
+  ansible.builtin.copy:
+    src: rustdesk-plist.sh
+    dest: /tmp/rustdesk-plist.sh
+    owner: "root"
+    group: wheel
+    mode: "0700"
+  become: true
+
+- name: Run RustDesk service script
+  ansible.builtin.command:
+    argv:
+      - /tmp/rustdesk-plist.sh
+      - --app-path
+      - /Applications/RustDesk.app
+      - --target-user
+      - "{{ rustdesk_user }}"
+  become: true
