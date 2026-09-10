@@ -1,5 +1,5 @@
 ---
-- name: Install XRDP
+- name: Setup remote access
   ansible.builtin.include_tasks: "{{ taskfile }}"
   with_first_found:
     - files:
